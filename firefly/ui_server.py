@@ -72,7 +72,7 @@ class ExpandHandler(tornado.web.RequestHandler):
         conn = self.application.settings['db_connection']
         try:
             stateid = util.b58decode(b58id)
-        except:
+        except Exception:
             raise tornado.web.HTTPError(404)
         row = conn.execute("select state from states where id=?", (stateid,)).fetchone()
 
