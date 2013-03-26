@@ -146,59 +146,62 @@ Runs in test mode:
         }
 
     config["testing"] = options.testing
-    config["data_server"]["data_sources_by_key"] = {}
 
     if options.config_file is None:
         config["config_file"] = "firefly.yaml"
     else:
         config["config_file"] = options.config_file
 
-    if config["testing"]:
-        config['data_server']['data_sources'].append('data_sources.test_data.TestData')
-
-        # if we're testing and not behind a reverse proxy (apache), make the base
-        # url / instead of /firefly to compensate for apache url rewriting
-        config['ui_server']['url_path_prefix'] = '/'
-
-        # Turn on automatic code reloading
-        config["data_server"]['debug'] = True
-        config["ui_server"]['debug'] = True
-
-        log.info("Running in TEST MODE")
-
-        if "data_servers" not in config['ui_server']:
-            config['ui_server']['data_servers'] = []
-
-        if not options.omit_data_server:
-            config['ui_server']['data_servers'].append({
-                'name': 'http://%s:%s' % (socket.getfqdn(), config["data_server"]["port"]),
-                'desc': socket.getfqdn()
-            })
-
-    data_sources = []
-
-    # mix in the configured data sources to the data server configuration
-    def get_ds_instance(ds):
-        ds_class = util.import_module_class(ds)
-        ds_kwargs = config['data_server']['data_source_config'].get(ds, {})
-        ds_instance = ds_class(**ds_kwargs)  # args only used by StatMonsterRRD atm
-        key = util.generate_ds_key(ds)
-        ds_instance._FF_KEY = key
-        config['data_server']['data_sources_by_key'][key] = ds_instance
-        return ds_instance
-
-    for ds in config['data_server']['data_sources']:
-        ds_instance = get_ds_instance(ds)
-        data_sources.append(ds_instance)
-        log.debug('Using datasource %s' % type(ds_instance).__name__)
-
-    config["data_server"]["data_sources"] = data_sources
-
     if "secret_key" not in config.keys():
         log.error("No Secret Key Provided: Exiting")
         sys.exit(1)
 
     if not options.omit_data_server:
+        config["data_server"]["data_sources_by_key"] = {}
+        if not config['data_server']['data_sources']:
+            config['data_server']['data_sources'] = []
+
+
+        if config["testing"]:
+            config['data_server']['data_sources'].append('data_sources.test_data.TestData')
+            # if we're testing and not behind a reverse proxy (apache), make the base
+            # url / instead of /firefly to compensate for apache url rewriting
+            config['ui_server']['url_path_prefix'] = '/'
+
+            # Turn on automatic code reloading
+            config["data_server"]['debug'] = True
+            config["ui_server"]['debug'] = True
+
+            log.info("Running in TEST MODE")
+
+            if "data_servers" not in config['ui_server']:
+                config['ui_server']['data_servers'] = []
+
+            if not options.omit_data_server:
+                config['ui_server']['data_servers'].append({
+                    'name': 'http://%s:%s' % (socket.getfqdn(), config["data_server"]["port"]),
+                    'desc': socket.getfqdn()
+                })
+
+        data_sources = []
+
+        # mix in the configured data sources to the data server configuration
+        def get_ds_instance(ds):
+            ds_class = util.import_module_class(ds)
+            ds_kwargs = config['data_server']['data_source_config'].get(ds, {})
+            ds_instance = ds_class(**ds_kwargs)  # args only used by StatMonsterRRD atm
+            key = util.generate_ds_key(ds)
+            ds_instance._FF_KEY = key
+            config['data_server']['data_sources_by_key'][key] = ds_instance
+            return ds_instance
+
+        for ds in config['data_server']['data_sources']:
+            ds_instance = get_ds_instance(ds)
+            data_sources.append(ds_instance)
+            log.debug('Using datasource %s' % type(ds_instance).__name__)
+
+        config["data_server"]["data_sources"] = data_sources
+
         # Allow the data server to initialize itself and attach itself to the IOLoop
         try:
             initialize_data_server(config["data_server"], secret_key=config["secret_key"], ioloop=tornado.ioloop.IOLoop.instance())
