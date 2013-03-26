@@ -21,6 +21,13 @@ firefly.Dashboard = function(data_servers, makeURL, container, isEmbedded) {
 	this.observeEvents();
 	this.unpauseUpdates_();
 
+	if (window.location.hash) {
+		this.refreshFromURLFragment({'fragment': window.location.hash.slice(1)});
+	}
+
+	if (this.isEmpty()) {
+		this.editGraph(this.graphs_[0][0]);
+	}
 };
 
 /** ms between graph updates */
@@ -28,9 +35,6 @@ firefly.Dashboard.prototype.REGULAR_REFRESH_INTERVAL = 10000;
 
 /** min-height of graph in px */
 firefly.Dashboard.prototype.MINIMUM_GRAPH_HEIGHT = 200;
-
-
-
 
 /**
  * @type {goog.debug.Logger}
@@ -55,6 +59,16 @@ firefly.Dashboard.prototype.printGraphs_ = function() {
 		}
 		this.logger_.info(row);
 	}
+};
+
+firefly.Dashboard.prototype.isEmpty = function() {
+	foundGraph = this.iterGraphs_(function(graph) {
+		if (!graph.isEmpty()) {
+			return false;
+		}
+	});
+
+	return !!foundGraph;
 };
 
 
@@ -107,6 +121,7 @@ firefly.Dashboard.prototype.clearGraphs = function(row) {
  * helper to iterate over the internal graph matrix
  * @param {function()} fxn a function that will be passed the graph, row and column
  * @row just iterate a particular row
+ * @returns {boolean} false if the `fxn` returns false in an an attempt to short-circuit the loop
  */
 firefly.Dashboard.prototype.iterGraphs_ = function(fxn, row) {
 	if (row === undefined) {
@@ -120,9 +135,10 @@ firefly.Dashboard.prototype.iterGraphs_ = function(fxn, row) {
 	for (var row=rowMin; row < rowMax; row++) {
 		for (var col=0; col < this.graphs_[row].length; col++) {
 			var result = fxn(this.graphs_[row][col], row, col);
-			if (result === false) return;
+			if (result === false) return false;
 		}
 	}
+	return true;
 };
 
 
@@ -149,36 +165,40 @@ firefly.Dashboard.prototype.observeEvents = function() {
 	var dashboard = this;
 
 	// when the hash changes, we probably need to update the dashboard
-	// TODO(bigo): convert to pushState
 	$(window).bind('hashchange', function(evt) {
-		// we keep a mutex so we don't get into infinite loops
-		// TODO(bigo): better description
-		if (!dashboard.hashchange_mutex_) {
-			if (evt.fragment) {
-				var fragment = decodeURIComponent(evt.fragment);
-				// we use a shebang-style fragment, so slice off the '!'
-				$.ajax({
-					url: dashboard.makeURL_('expand/' + fragment.slice(1)),
-					async: false,
-					dataType: 'json',
-					success: function(data) {
-						dashboard.sync(data);
-					}
-				});
-			}
-		} else {
-			// clear the mutex so future changes will be interpreted properly
-			dashboard.hashchange_mutex_ = false;
-		}
+		dashboard.refreshFromURLFragment(evt);
 	});
 
-	$(document).ready(function() {
-		$(window).trigger('hashchange');
-	});
-
+	// same for window resizes
 	$(window).resize(function() {
 		dashboard.view.adjustGraphHeights_();
 	});
+};
+
+
+/**
+ * Expands the URL fragment into a serialized dashboard spec and syncs the view to it.
+ */
+firefly.Dashboard.prototype.refreshFromURLFragment = function(evt) {
+	var dashboard = this;
+
+	if (!dashboard.hashchange_mutex_) {
+		if (evt.fragment) {
+			var fragment = decodeURIComponent(evt.fragment);
+			// we use a shebang-style fragment, so slice off the '!'
+			$.ajax({
+				url: dashboard.makeURL_('expand/' + fragment.slice(1)),
+				async: false,
+				dataType: 'json',
+				success: function(data) {
+					dashboard.sync(data);
+				}
+			});
+		}
+	} else {
+		// clear the mutex so future changes will be interpreted properly
+		dashboard.hashchange_mutex_ = false;
+	}
 };
 
 

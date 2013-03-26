@@ -26,6 +26,7 @@ firefly.init = function(dataServers, urlPathPrefix, dashboardContainer, isEmbedd
 	}
 
 	var dashboard = new firefly.Dashboard(dataServers, makeURL, dashboardContainer, isEmbedded);
+
 	d=dashboard;
 };
 

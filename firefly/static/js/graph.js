@@ -9,6 +9,7 @@ firefly.Graph = function(container, sourcerer, makeURL, serialized, height) {
 	this.makeURL_ = makeURL;
 
 	this.sourcerer = sourcerer;
+	this.renderer = null;
 	this.container = container;
 	this._options = undefined;
 	this._title = undefined;
