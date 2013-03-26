@@ -24,8 +24,8 @@ data_server:
     # The data sources to collect data from.
     # These are Python modules contained in data_sources/
     data_sources:
-        - data_sources.ganglia_rrd.GangliaRRD
-        - data_sources.stat_monster_rrd.StatMonsterRRD
+        # - data_sources.ganglia_rrd.GangliaRRD
+        # - data_sources.stat_monster_rrd.StatMonsterRRD
         # - data_sources.graphite_wsp.GraphiteWSP
 
     # Configuration for the selected data sources
