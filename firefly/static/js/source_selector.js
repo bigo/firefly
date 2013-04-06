@@ -8,10 +8,12 @@ goog.require('goog.debug.Logger');
  */
 firefly.SourceSelector = function(sources, initial) {
 	this.logger_ = goog.debug.Logger.getLogger('firefly.SourceSelector');
-
+	console.debug("ss init");
 	this._sources = sources;
 	this._create(initial);
+	console.debug("create done");
 	this._observeEvents();
+	console.debug("observing events");
 };
 
 /**
@@ -28,14 +30,27 @@ firefly.SourceSelector.prototype._create = function(initial) {
 	this.container = container;
 
 	// var sources = this._sources.getSources();
-	var select = this._createSelect(this._sources.getGraphRoot([]));
+	var root = this._sources.getGraphRoot([]);
+	var select = this._createSelect(root);
 	$(select).attr('data-placeholder', 'Select a Source');
 
+	// if we're passing in a value to pre-populate the selector with, do that
 	if (initial) {
 		for (var i=0; i<initial.length; i++) {
 			var subSelect = $(this.container).children('select').last().get(0);
 			this._setSelectedValue(subSelect, initial[i]);
 		}
+	// otherwise, open the selector as deep as we can off the bat
+	} else {
+		var sourceSelector = this;
+		setTimeout(function(){
+			$(select).trigger('liszt:open');
+			if (root.length == 1) {
+				$(select).children('option').get(1).selected = true;
+				$(select).trigger('liszt:updated');
+				sourceSelector._selectionChanged(select);
+			}
+		}, 0);
 	}
 
 	var controls = document.createElement('footer');
@@ -85,6 +100,7 @@ firefly.SourceSelector.prototype._createSelect = function(entries) {
 };
 
 firefly.SourceSelector.prototype._setSelectedValue = function(select, value) {
+	console.debug('_setSelectedValue: '+value);
 	var that = this;
 	$(select).children('option').each(function(idx) {
 		if (this.value === value) {
@@ -118,8 +134,8 @@ firefly.SourceSelector.prototype._selectionChanged = function(select) {
 	$(select).data('ff:selected-value', select.value);
 
 	// get the full, currently selected path and decide whether
-	// it's legit (swapping a SELECT in the middle of the stack)
-	// can produce invalid paths
+	// it's legit (swapping a SELECT in the middle of the stack
+	// can produce invalid paths).
 	var selectedPath = this.getSelectedPath();
 	var selectedPathIsValid = true;
 	try {
@@ -157,11 +173,29 @@ firefly.SourceSelector.prototype._selectionChanged = function(select) {
 		var nextSelect = $(select).nextAll('select').get(0);
 		// if it only has one real child, recurse as appropriate, auto-selecting
 		if (leafNode.children.length == 1) {
+			console.debug("one kid");
 			$(nextSelect).children('option').get(1).selected = true;
 			$(nextSelect).trigger('liszt:updated');
 			this._selectionChanged(nextSelect);
 		} else {
-			$(nextSelect).focus();
+			console.debug("more than one kid");
+			console.debug(this);
+			// console.debug(nextSelect);
+			// $(nextSelect).trigger('liszt:activate');
+			// console.debug($(nextSelect).chosen());
+			// $(nextSelect).chosen()._focus();
+			setTimeout(function(){$(nextSelect).trigger('liszt:open');},0);
+			// $(nextSelect).trigger('liszt:open');
+			console.debug($(nextSelect).chosen().pending_destroy_click);
+			// $(nextSelect).find('input').first().focus();
+			// console.debug($(nextSelect).next('div').find('input').get(0));
+			// var foo = $(nextSelect).chosen();
+			// debugger;
+			//trigger('liszt:open');
+
+			// console.debug($(nextSelect).next('div').find('a'));//.
+			// trigger('click');
+			// $(nextSelect).click();
 		}
 	} else if (leafVal) {
 		// if we just selected a file, select it

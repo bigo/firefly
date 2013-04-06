@@ -53,7 +53,6 @@ class GraphiteWSP(firefly.data_source.DataSource):
         for source in sources:
             path = os.path.join(self.GRAPH_ROOT, "%s.wsp" % (os.path.join(*source),))
             timeInfo, values = whisper.fetch(path, start, end)
-            print len(values)
             start, end, step = timeInfo
             serieses.append(values)
 
